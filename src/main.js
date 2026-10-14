@@ -1,5 +1,5 @@
 // ==========================================================================
-// VR Controller Studio - Firebase Realtime Database Engine
+// VR Controller Studio - Mobile-First Firebase Realtime Database Engine
 // ==========================================================================
 
 const RTDB_BASE = 'https://easy-ise-default-rtdb.firebaseio.com';
@@ -22,8 +22,18 @@ const state = {
 };
 
 // ==========================================================================
-// Web Audio Synthesizer (Zero-dependency Tactile Sound FX)
+// Mobile Haptics & Web Audio Synthesizer
 // ==========================================================================
+function triggerHaptic(duration = 25) {
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    try {
+      navigator.vibrate(duration);
+    } catch (e) {
+      // Haptics not allowed or supported
+    }
+  }
+}
+
 class SoundFX {
   constructor() {
     this.ctx = null;
@@ -75,12 +85,12 @@ class SoundFX {
         osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.05);
 
         gain.gain.setValueAtTime(0.18, this.ctx.currentTime + idx * 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.05 + 0.25);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.05 + 0.22);
 
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         osc.start(this.ctx.currentTime + idx * 0.05);
-        osc.stop(this.ctx.currentTime + idx * 0.05 + 0.25);
+        osc.stop(this.ctx.currentTime + idx * 0.05 + 0.22);
       });
     } catch (e) {
       console.warn('Audio play error:', e);
@@ -96,15 +106,15 @@ class SoundFX {
       const gain = this.ctx.createGain();
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(320, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(140, this.ctx.currentTime + 0.15);
+      osc.frequency.exponentialRampToValueAtTime(140, this.ctx.currentTime + 0.12);
 
       gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
 
       osc.connect(gain);
       gain.connect(this.ctx.destination);
       osc.start();
-      osc.stop(this.ctx.currentTime + 0.15);
+      osc.stop(this.ctx.currentTime + 0.12);
     } catch (e) {
       console.warn('Audio play error:', e);
     }
@@ -118,15 +128,12 @@ const sfx = new SoundFX();
 // ==========================================================================
 const currentYesDisplay = document.getElementById('current-yes-display');
 const currentLetterDisplay = document.getElementById('current-letter-display');
-const vendorStateBadge = document.getElementById('vendor-state-badge');
 const latencyTag = document.getElementById('latency-tag');
 const connectionIndicator = document.getElementById('connection-indicator');
 const statusDot = connectionIndicator.querySelector('.status-indicator-dot');
 const jsonVendorYes = document.getElementById('json-vendor-yes');
 const jsonVendorChoice = document.getElementById('json-vendor-choice');
 const jsonAlphabetLetter = document.getElementById('json-alphabet-letter');
-const fullRawJson = document.getElementById('full-raw-json');
-const lastSyncTime = document.getElementById('last-sync-time');
 const activityLogList = document.getElementById('activity-log-list');
 const toastContainer = document.getElementById('toast-container');
 const autoResetChk = document.getElementById('auto-reset-chk');
@@ -148,50 +155,55 @@ const refreshDbBtn = document.getElementById('refresh-db-btn');
 const clearLogsBtn = document.getElementById('clear-logs-btn');
 
 // ==========================================================================
-// Logging & Toast Utilities
+// Toast & Logging
 // ==========================================================================
 function addLog(msg, type = 'info') {
   const item = document.createElement('div');
-  item.className = `log-item ${type}`;
+  item.className = 'log-item text-[11px] py-0.5 flex gap-1.5 leading-snug';
 
   const timeStr = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  
+  let colorClass = 'text-slate-300';
+  if (type === 'success') colorClass = 'text-emerald-400';
+  if (type === 'error') colorClass = 'text-rose-400';
+
   item.innerHTML = `
-    <span class="log-time">${timeStr}</span>
-    <span class="log-msg">${msg}</span>
+    <span class="text-slate-500 shrink-0 font-mono">[${timeStr}]</span>
+    <span class="${colorClass}">${msg}</span>
   `;
 
   activityLogList.insertBefore(item, activityLogList.firstChild);
 
-  // Keep max 60 log entries
-  while (activityLogList.children.length > 60) {
+  while (activityLogList.children.length > 50) {
     activityLogList.removeChild(activityLogList.lastChild);
   }
 }
 
 function showToast(message, type = 'success') {
   const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.innerHTML = `
-    <span>${type === 'success' ? '⚡' : '⚠️'}</span>
-    <span>${message}</span>
-  `;
+  const borderCol = type === 'success' ? 'border-emerald-500/50 text-emerald-200' : 'border-rose-500/50 text-rose-200';
+  const icon = type === 'success' ? '⚡' : '⚠️';
+
+  toast.className = `flex items-center gap-2 bg-slate-900/95 backdrop-blur-md border ${borderCol} px-3.5 py-2 rounded-xl text-xs font-medium shadow-2xl transition-all duration-300 transform translate-y-3 opacity-0 pointer-events-auto`;
+  toast.innerHTML = `<span>${icon}</span><span>${message}</span>`;
 
   toastContainer.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.add('show'));
+  requestAnimationFrame(() => {
+    toast.classList.remove('translate-y-3', 'opacity-0');
+  });
 
   setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 400);
-  }, 2800);
+    toast.classList.add('translate-y-3', 'opacity-0');
+    setTimeout(() => toast.remove(), 350);
+  }, 2400);
 }
 
 // Flash UI tree row on change
 function flashRow(rowId) {
   const row = document.getElementById(rowId);
   if (row) {
-    row.classList.remove('pulse-change');
-    void row.offsetWidth; // trigger reflow
-    row.classList.add('pulse-change');
+    row.classList.add('bg-cyan-500/20');
+    setTimeout(() => row.classList.remove('bg-cyan-500/20'), 600);
   }
 }
 
@@ -203,7 +215,11 @@ function updateUI() {
 
   // Update YES badge
   currentYesDisplay.textContent = yesVal.toUpperCase();
-  currentYesDisplay.className = `state-value ${yesVal === 'yes' ? 'state-yes' : 'state-no'}`;
+  if (yesVal === 'yes') {
+    currentYesDisplay.className = 'font-mono text-xl sm:text-2xl font-black tracking-tight text-emerald-400 drop-shadow-[0_0_12px_#34d399]';
+  } else {
+    currentYesDisplay.className = 'font-mono text-xl sm:text-2xl font-black tracking-tight text-rose-400 drop-shadow-[0_0_12px_#f43f5e]';
+  }
 
   // Update Letter badge
   const activeLetter = state.alphabetControl.currentLetter || state.vendorControl.choice || '';
@@ -214,9 +230,9 @@ function updateUI() {
     const btn = letterButtons[letter];
     if (btn) {
       if (activeLetter === letter) {
-        btn.classList.add('active-state');
+        btn.classList.add('ring-2', 'ring-white', 'scale-105');
       } else {
-        btn.classList.remove('active-state');
+        btn.classList.remove('ring-2', 'ring-white', 'scale-105');
       }
     }
   });
@@ -224,7 +240,7 @@ function updateUI() {
   // Update Live Tree View
   if (jsonVendorYes) {
     jsonVendorYes.textContent = `"${yesVal}"`;
-    jsonVendorYes.style.color = yesVal === 'yes' ? 'var(--neon-emerald)' : 'var(--neon-danger)';
+    jsonVendorYes.className = `font-bold ${yesVal === 'yes' ? 'text-emerald-400' : 'text-rose-400'}`;
   }
 
   if (jsonVendorChoice) {
@@ -241,22 +257,21 @@ function updateUI() {
     latencyTag.textContent = `${state.latency} ms`;
   }
 
-  statusDot.className = `status-indicator-dot ${state.isOnline ? 'online' : 'offline'}`;
-  lastSyncTime.textContent = new Date().toLocaleTimeString([], { hour12: false });
-
-  if (state.rawDb && fullRawJson) {
-    fullRawJson.textContent = JSON.stringify(state.rawDb, null, 2);
+  if (state.isOnline) {
+    statusDot.className = 'status-indicator-dot w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]';
+  } else {
+    statusDot.className = 'status-indicator-dot w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_6px_#f43f5e]';
   }
 }
 
 // ==========================================================================
-// Firebase RTDB API Operations
+// Firebase RTDB Operations
 // ==========================================================================
-
-// Set vendorControl.yes (Target of the user's primary prompt)
 async function setVendorYes(value) {
   const normalized = value.toLowerCase();
   const startTime = performance.now();
+
+  triggerHaptic(normalized === 'yes' ? 40 : 20);
 
   // Optimistic UI update
   state.vendorControl.yes = normalized;
@@ -266,7 +281,7 @@ async function setVendorYes(value) {
   if (normalized === 'yes') {
     sfx.playSuccess();
     btnYes.classList.add('simulated-active');
-    setTimeout(() => btnYes.classList.remove('simulated-active'), 300);
+    setTimeout(() => btnYes.classList.remove('simulated-active'), 250);
   } else {
     sfx.playReset();
   }
@@ -287,7 +302,7 @@ async function setVendorYes(value) {
     state.vendorControl.yes = data;
     updateUI();
 
-    addLog(`PUT <strong>vendorControl/yes</strong> &rarr; <code>"${data}"</code> (${elapsed}ms)`, 'success');
+    addLog(`vendorControl/yes &rarr; <strong>"${data}"</strong> (${elapsed}ms)`, 'success');
     showToast(`vendorControl.yes changed to "${data}"`, 'success');
 
     // Handle auto-reset to "no" after 3s if enabled
@@ -301,14 +316,14 @@ async function setVendorYes(value) {
   } catch (err) {
     console.error('Failed to update vendorControl.yes:', err);
     addLog(`Error setting vendorControl/yes: ${err.message}`, 'error');
-    showToast(`Failed to update Firebase: ${err.message}`, 'error');
+    showToast(`Error: ${err.message}`, 'error');
   }
 }
 
-// Set letter selection (A, B, C, D)
 async function setLetter(letter) {
   const startTime = performance.now();
-  sfx.playClick(750 + ['A', 'B', 'C', 'D'].indexOf(letter) * 120, 0.08);
+  triggerHaptic(25);
+  sfx.playClick(750 + ['A', 'B', 'C', 'D'].indexOf(letter) * 120, 0.06);
 
   // Optimistic update
   state.alphabetControl.currentLetter = letter;
@@ -318,8 +333,6 @@ async function setLetter(letter) {
   flashRow('row-vendor-choice');
 
   try {
-    // We update both alphabetControl/currentLetter and vendorControl/choice
-    // so any VR controller scene listening to either path receives the event!
     const [resAlpha, resVendor] = await Promise.all([
       fetch(`${RTDB_BASE}/alphabetControl/currentLetter.json`, {
         method: 'PUT',
@@ -338,8 +351,8 @@ async function setLetter(letter) {
 
     if (!resAlpha.ok) throw new Error(`HTTP ${resAlpha.status}`);
 
-    addLog(`Selected Button <strong>[${letter}]</strong> &rarr; alphabetControl &amp; vendorControl (${elapsed}ms)`, 'success');
-    showToast(`Controller Button [${letter}] Dispatched`, 'success');
+    addLog(`Selected <strong>[${letter}]</strong> &rarr; RTDB (${elapsed}ms)`, 'success');
+    showToast(`Button [${letter}] Dispatched`, 'success');
     updateUI();
   } catch (err) {
     console.error('Failed to set letter:', err);
@@ -348,8 +361,8 @@ async function setLetter(letter) {
   }
 }
 
-// Clear Letter
 async function clearLetter() {
+  triggerHaptic(20);
   sfx.playClick(400, 0.05);
   state.alphabetControl.currentLetter = '';
   state.vendorControl.choice = '';
@@ -368,14 +381,13 @@ async function clearLetter() {
         body: JSON.stringify({ choice: '' })
       })
     ]);
-    addLog('Cleared letter selection in Firebase', 'info');
+    addLog('Cleared letter selection', 'info');
     showToast('Selection Cleared', 'info');
   } catch (e) {
     console.error(e);
   }
 }
 
-// Fetch Full Database Snapshot
 async function fetchFullDatabase() {
   const start = performance.now();
   try {
@@ -407,14 +419,12 @@ async function fetchFullDatabase() {
 }
 
 // ==========================================================================
-// Real-time EventSource Stream (Firebase Server-Sent Events)
+// Real-time EventSource Stream (SSE)
 // ==========================================================================
 let eventSource = null;
 
 function setupRealtimeStream() {
-  if (eventSource) {
-    eventSource.close();
-  }
+  if (eventSource) eventSource.close();
 
   try {
     eventSource = new EventSource(`${RTDB_BASE}/.json`);
@@ -424,7 +434,6 @@ function setupRealtimeStream() {
         const payload = JSON.parse(event.data);
         const { path, data } = payload;
 
-        // Path e.g. "/vendorControl/yes" or "/" or "/alphabetControl"
         if (path === '/vendorControl/yes') {
           if (state.vendorControl.yes !== data) {
             state.vendorControl.yes = data;
@@ -454,108 +463,72 @@ function setupRealtimeStream() {
 
         updateUI();
       } catch (e) {
-        console.error('Error handling SSE event:', e);
-      }
-    });
-
-    eventSource.addEventListener('patch', (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        const { path, data } = payload;
-        if (data && data.yes) state.vendorControl.yes = data.yes;
-        if (data && data.choice !== undefined) state.vendorControl.choice = data.choice;
-        if (data && data.currentLetter !== undefined) state.alphabetControl.currentLetter = data.currentLetter;
-        updateUI();
-      } catch (e) {
-        console.error('Patch error:', e);
+        console.error('SSE Error:', e);
       }
     });
 
     eventSource.onopen = () => {
       state.isOnline = true;
       updateUI();
-      addLog('Real-time SSE Stream connected to Firebase', 'info');
-    };
-
-    eventSource.onerror = (err) => {
-      // EventSource reconnects automatically
-      console.warn('SSE connection warning:', err);
+      addLog('Real-time SSE Stream connected', 'info');
     };
   } catch (err) {
-    console.warn('EventSource not supported or blocked:', err);
+    console.warn('EventSource warning:', err);
   }
 }
 
-// Fallback Heartbeat Poller (Every 4 seconds)
-setInterval(async () => {
-  await fetchFullDatabase();
-}, 4000);
+// Polling fallback
+setInterval(fetchFullDatabase, 4000);
 
 // ==========================================================================
-// Event Listeners & Interactions
+// Event Listeners
 // ==========================================================================
-
-// YES Button click
-btnYes.addEventListener('click', () => {
-  setVendorYes('yes');
-});
-
-// Reset to "no" button click
-btnNoReset.addEventListener('click', () => {
-  setVendorYes('no');
-});
-
-// Toggle YES / NO button click
+btnYes.addEventListener('click', () => setVendorYes('yes'));
+btnNoReset.addEventListener('click', () => setVendorYes('no'));
 btnToggleYes.addEventListener('click', () => {
   const current = (state.vendorControl.yes || 'no').toLowerCase();
   setVendorYes(current === 'yes' ? 'no' : 'yes');
 });
 
-// Auto-reset toggle change
 autoResetChk.addEventListener('change', (e) => {
   state.autoResetEnabled = e.target.checked;
+  triggerHaptic(15);
   sfx.playClick(500, 0.05);
-  addLog(`Auto-reset after 3s: <strong>${state.autoResetEnabled ? 'ENABLED' : 'DISABLED'}</strong>`, 'info');
+  addLog(`Auto-reset (3s): <strong>${state.autoResetEnabled ? 'ON' : 'OFF'}</strong>`, 'info');
 });
 
-// Alphabet Buttons [A, B, C, D]
 ['A', 'B', 'C', 'D'].forEach(letter => {
   const btn = letterButtons[letter];
-  if (btn) {
-    btn.addEventListener('click', () => setLetter(letter));
-  }
+  if (btn) btn.addEventListener('click', () => setLetter(letter));
 });
 
-// Clear Letter Button
-btnClearLetter.addEventListener('click', () => clearLetter());
+btnClearLetter.addEventListener('click', clearLetter);
 
-// Force Refresh DB
 refreshDbBtn.addEventListener('click', async () => {
+  triggerHaptic(20);
   sfx.playClick(800, 0.04);
-  refreshDbBtn.querySelector('.refresh-icon').style.transform = 'rotate(360deg)';
+  const icon = refreshDbBtn.querySelector('.refresh-icon');
+  if (icon) icon.style.transform = 'rotate(360deg)';
   await fetchFullDatabase();
-  setTimeout(() => {
-    refreshDbBtn.querySelector('.refresh-icon').style.transform = '';
-  }, 400);
+  setTimeout(() => { if (icon) icon.style.transform = ''; }, 400);
   showToast('Database Refreshed', 'info');
 });
 
-// Clear Logs
 clearLogsBtn.addEventListener('click', () => {
   activityLogList.innerHTML = '';
   addLog('Logs cleared', 'info');
 });
 
-// Sound Toggle
 soundToggleBtn.addEventListener('click', () => {
   state.soundEnabled = !state.soundEnabled;
+  triggerHaptic(20);
   soundIcon.textContent = state.soundEnabled ? '🔊' : '🔇';
   soundToggleBtn.style.opacity = state.soundEnabled ? '1' : '0.5';
   if (state.soundEnabled) sfx.playClick(880, 0.06);
   showToast(`Audio Feedback ${state.soundEnabled ? 'Enabled' : 'Muted'}`, 'info');
 });
 
-// Keyboard Shortcuts (A, B, C, D, Y, N, Enter, Space)
+// Keyboard bindings for desktop/laptop testing
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
@@ -564,8 +537,8 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
     const btn = letterButtons[key];
     if (btn) {
-      btn.classList.add('simulated-active');
-      setTimeout(() => btn.classList.remove('simulated-active'), 200);
+      btn.classList.add('scale-95');
+      setTimeout(() => btn.classList.remove('scale-95'), 150);
     }
     setLetter(key);
   } else if (key === 'Y' || e.key === 'Enter') {
@@ -576,7 +549,6 @@ window.addEventListener('keydown', (e) => {
     setVendorYes('no');
   } else if (e.key === ' ') {
     e.preventDefault();
-    // Space toggles YES/NO
     const current = (state.vendorControl.yes || 'no').toLowerCase();
     setVendorYes(current === 'yes' ? 'no' : 'yes');
   }
@@ -586,10 +558,10 @@ window.addEventListener('keydown', (e) => {
 // Initialization
 // ==========================================================================
 async function init() {
-  addLog('Initializing VR Controller Studio...', 'info');
+  addLog('Initializing Mobile VR Controller...', 'info');
   await fetchFullDatabase();
   setupRealtimeStream();
-  addLog('Controller ready for input commands.', 'success');
+  addLog('Controller ready for touch input.', 'success');
 }
 
 init();
