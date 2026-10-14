@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="VR Controller Remote Interface for Firebase Realtime Database - Control Vendor Actions and Alphabet Scenes" />
+    <title>VR Controller | Firebase Realtime Database Control Panel</title>
+    <!-- Modern Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- Background Ambient Glows -->
+      <div class="ambient-glow glow-cyan"></div>
+      <div class="ambient-glow glow-purple"></div>
+      <div class="ambient-glow glow-emerald"></div>
+
+      <!-- Header Section -->
+      <header class="app-header">
+        <div class="header-branding">
+          <div class="logo-badge">
+            <span class="logo-icon">🥽</span>
+            <span class="logo-ping"></span>
+          </div>
+          <div>
+            <h1 class="app-title">VR Controller Studio</h1>
+            <p class="app-subtitle">Real-time Vendor &amp; Alphabet Database Commander</p>
+          </div>
+        </div>
+
+        <div class="header-status">
+          <div class="connection-card" id="connection-indicator">
+            <span class="status-indicator-dot online"></span>
+            <div class="connection-meta">
+              <span class="connection-label">Live RTDB Stream</span>
+              <span class="connection-url" title="https://easy-ise-default-rtdb.firebaseio.com/">easy-ise-default-rtdb</span>
+            </div>
+            <span class="latency-badge" id="latency-tag">-- ms</span>
+          </div>
+          <button id="sound-toggle-btn" class="icon-toggle-btn" title="Toggle Sound Feedback">
+            <span id="sound-icon">🔊</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Layout -->
+      <main class="main-container">
+        
+        <!-- Center Controller Deck -->
+        <section class="controller-deck">
+
+          <!-- Section 1: Vendor Control (The Primary YES Action) -->
+          <div class="deck-card card-vendor">
+            <div class="card-header">
+              <div class="card-header-info">
+                <span class="section-tag">GROUP: VENDOR CONTROL</span>
+                <h2 class="card-title">Vendor Confirmation State</h2>
+                <p class="card-desc">Clicking <strong>YES</strong> immediately sets Firebase <code>vendorControl.yes</code> to <code>"yes"</code>.</p>
+              </div>
+              <div class="current-state-pill" id="vendor-state-badge">
+                <span class="state-label">Current State:</span>
+                <span class="state-value" id="current-yes-display">FETCHING...</span>
+              </div>
+            </div>
+
+            <div class="vendor-button-container">
+              <!-- PRIMARY YES BUTTON -->
+              <button id="btn-yes" class="cyber-btn btn-yes-trigger" data-action="set-yes">
+                <div class="btn-shine"></div>
+                <div class="btn-inner">
+                  <span class="btn-hotkey">[Y]</span>
+                  <span class="btn-main-text">YES</span>
+                  <span class="btn-sub-text">SET STATE &rarr; "YES"</span>
+                </div>
+              </button>
+
+              <!-- Secondary helper actions for testing -->
+              <div class="vendor-quick-actions">
+                <button id="btn-no-reset" class="action-pill-btn pill-danger" data-action="set-no">
+                  <span class="pill-dot"></span> Reset to "no"
+                </button>
+                <button id="btn-toggle-yes" class="action-pill-btn pill-secondary" data-action="toggle">
+                  ⇄ Toggle State
+                </button>
+                <label class="auto-reset-toggle">
+                  <input type="checkbox" id="auto-reset-chk" />
+                  <span class="slider"></span>
+                  <span class="toggle-text">Auto-reset to "no" after 3s</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Alphabet Scene Buttons A, B, C, D -->
+          <div class="deck-card card-alphabet">
+            <div class="card-header">
+              <div class="card-header-info">
+                <span class="section-tag">GROUP: ALPHABET &amp; INPUT CONTROLS</span>
+                <h2 class="card-title">Controller Inputs (A, B, C, D)</h2>
+                <p class="card-desc">Interactive controller inputs. Sets current active selection in Realtime Database.</p>
+              </div>
+              <div class="current-state-pill" id="alphabet-state-badge">
+                <span class="state-label">Active Letter:</span>
+                <span class="state-value letter-value" id="current-letter-display">NONE</span>
+              </div>
+            </div>
+
+            <!-- 4 CONTROLLER BUTTONS: A, B, C, D -->
+            <div class="letter-buttons-grid">
+              <button id="btn-a" class="cyber-btn letter-btn btn-letter-a" data-letter="A">
+                <div class="btn-shine"></div>
+                <div class="btn-inner">
+                  <span class="btn-hotkey">[A]</span>
+                  <span class="letter-symbol">A</span>
+                  <span class="btn-sub-text">SELECT A</span>
+                </div>
+              </button>
+
+              <button id="btn-b" class="cyber-btn letter-btn btn-letter-b" data-letter="B">
+                <div class="btn-shine"></div>
+                <div class="btn-inner">
+                  <span class="btn-hotkey">[B]</span>
+                  <span class="letter-symbol">B</span>
+                  <span class="btn-sub-text">SELECT B</span>
+                </div>
+              </button>
+
+              <button id="btn-c" class="cyber-btn letter-btn btn-letter-c" data-letter="C">
+                <div class="btn-shine"></div>
+                <div class="btn-inner">
+                  <span class="btn-hotkey">[C]</span>
+                  <span class="letter-symbol">C</span>
+                  <span class="btn-sub-text">SELECT C</span>
+                </div>
+              </button>
+
+              <button id="btn-d" class="cyber-btn letter-btn btn-letter-d" data-letter="D">
+                <div class="btn-shine"></div>
+                <div class="btn-inner">
+                  <span class="btn-hotkey">[D]</span>
+                  <span class="letter-symbol">D</span>
+                  <span class="btn-sub-text">SELECT D</span>
+                </div>
+              </button>
+            </div>
+
+            <div class="alphabet-footer-actions">
+              <button id="btn-clear-letter" class="action-pill-btn pill-subtle">
+                Clear Letter Selection
+              </button>
+              <div class="keyboard-hints">
+                <span>Keyboard Shortcuts:</span>
+                <kbd>A</kbd> <kbd>B</kbd> <kbd>C</kbd> <kbd>D</kbd> <kbd>Y</kbd> / <kbd>Enter</kbd>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- Right Side Panel: Live DB Inspector & Activity Stream -->
+        <aside class="sidebar-panel">
+
+          <!-- Database Live Inspector -->
+          <div class="deck-card card-inspector">
+            <div class="inspector-header">
+              <div class="inspector-title-wrap">
+                <span class="card-indicator"></span>
+                <h3 class="inspector-title">Live RTDB Snapshot</h3>
+              </div>
+              <button id="refresh-db-btn" class="refresh-pill-btn" title="Force Refresh">
+                <span class="refresh-icon">↻</span> Refresh
+              </button>
+            </div>
+            
+            <div class="live-tree-view">
+              <div class="tree-node">
+                <div class="node-key"><span class="folder-icon">📂</span> vendorControl</div>
+                <div class="node-children">
+                  <div class="leaf-row" id="row-vendor-yes">
+                    <span class="leaf-key">"yes":</span>
+                    <span class="leaf-val val-string" id="json-vendor-yes">"no"</span>
+                  </div>
+                  <div class="leaf-row" id="row-vendor-choice">
+                    <span class="leaf-key">"choice":</span>
+                    <span class="leaf-val val-string" id="json-vendor-choice">"-"</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tree-node">
+                <div class="node-key"><span class="folder-icon">📂</span> alphabetControl</div>
+                <div class="node-children">
+                  <div class="leaf-row" id="row-alphabet-current">
+                    <span class="leaf-key">"currentLetter":</span>
+                    <span class="leaf-val val-string" id="json-alphabet-letter">""</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tree-node collapsed" id="raw-json-details">
+                <details>
+                  <summary class="node-key node-toggle"><span class="folder-icon">📄</span> Full Database JSON</summary>
+                  <pre class="raw-json-block" id="full-raw-json">Loading...</pre>
+                </details>
+              </div>
+            </div>
+
+            <div class="db-footer-stats">
+              <span>Sync Mode: <strong>SSE + REST</strong></span>
+              <span id="last-sync-time">Just now</span>
+            </div>
+          </div>
+
+          <!-- Activity & Mutation Stream -->
+          <div class="deck-card card-stream">
+            <div class="stream-header">
+              <h3 class="inspector-title">Operations Log</h3>
+              <button id="clear-logs-btn" class="clear-btn">Clear</button>
+            </div>
+            <div class="log-stream-list" id="activity-log-list">
+              <div class="log-item info">
+                <span class="log-time">System</span>
+                <span class="log-msg">Connecting to Firebase Realtime Database...</span>
+              </div>
+            </div>
+          </div>
+
+        </aside>
+
+      </main>
+
+      <!-- Toast Notification Container -->
+      <div id="toast-container" class="toast-container"></div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
